@@ -164,7 +164,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "${{ needs.build.outputs.artifact_name }}-jar-${{ github.run_number }}"
-          path: target/
+          path: artifacts/
       
       - name: 🚀 Crear Release JAR PÚBLICO
         uses: softprops/action-gh-release@v2
@@ -184,7 +184,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            target/*.jar
+            artifacts/**/*.jar  
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
