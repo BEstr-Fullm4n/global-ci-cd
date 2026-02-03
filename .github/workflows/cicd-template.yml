@@ -1,22 +1,25 @@
-name: Global CI/CD Template
+name: 🌍 Global CI/CD Template
 on:
-  workflow_call:  # ← REUSABLE
+  workflow_call:
     inputs:
       java-version:
         description: 'JDK version'
         type: string
         default: '17'
-      branch:
+      target-branch:
         description: 'Target branch'
         type: string
         default: 'develop'
-      artifact-name:
-        description: 'Artifact name'
+      artifact-prefix:
+        description: 'Artifact prefix (from pom.xml)'
         type: string
         default: 'project'
+      version-prefix:
+        description: 'Release version prefix'
+        type: string
+        default: 'v1.0.'
 
 jobs:
-
   # 1. CODE REVIEW (Bloquea todo si falla)
   code-review:
     runs-on: ubuntu-latest
@@ -26,10 +29,10 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v4
       
-      - name: Configurar JDK 17
+      - name: Configurar JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: ${{ inputs.java-version }}
           distribution: 'temurin'
           cache: maven
       
@@ -41,20 +44,17 @@ jobs:
             pmd:pmd \
             checkstyle:check || exit 1
 
-      # Configurar Python 3.11
-      - name: 🐍 Setup Python & Convertir XML → JSON
+      - name: 🐍 Setup Python 3.11
         if: always()
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Convertir XML → JSON
-      - name: 🔄 Convertir XML reports a JSON
+      - name: 🔄 Convertir XML → JSON
         if: always()
         run: |
           pip install xmltodict
           
-          # SpotBugs → JSON (1 línea)
           python3 -c "
           import xmltodict, json
           with open('target/spotbugsXml.xml') as f:
@@ -64,7 +64,6 @@ jobs:
           print('✅ spotbugs.json OK')
           "
           
-          # PMD → JSON (1 línea)
           python3 -c "
           import xmltodict, json
           with open('target/pmd.xml') as f:
@@ -74,7 +73,6 @@ jobs:
           print('✅ pmd.json OK')
           "
           
-          # Checkstyle → JSON (1 línea)
           python3 -c "
           import xmltodict, json
           with open('target/checkstyle-result.xml') as f:
@@ -87,12 +85,11 @@ jobs:
           echo "📁 Archivos JSON generados:"
           ls -la target/*.json
       
-      # Assets como Artifacts (visible inmediatamente)
-      - name: 📦 Subir XML y JSON como Artifacts
+      - name: 📦 Subir Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: code-review-reports-${{ github.run_number }}
+          name: "${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}"
           path: |
             target/spotbugs*.xml
             target/spotbugs.json
@@ -102,15 +99,14 @@ jobs:
             target/checkstyle.json
           retention-days: 7
       
-      # Opcional: Release público con errores
-      - name: 🚨 Crear Release con Assets (Errores)
+      - name: 🚨 Release Errores
         if: failure()
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: code-review-${{ github.run_number }}
-          name: "🚨 Errores Code Review #${{ github.run_number }}"
-          draft: false  # ← PÚBLICO inmediatamente
-          prerelease: false
+          tag_name: "${{ inputs.artifact-prefix }}-errors-${{ github.run_number }}"
+          name: "🚨 Errores ${{ inputs.artifact-prefix }} #${{ github.run_number }}"
+          draft: false
+          prerelease: true
           files: |
             target/spotbugsXml.xml
             target/spotbugs.json
@@ -121,19 +117,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. BUILD JAR (SOLO si Code Review pasa)
+  # 2. BUILD JAR (CORREGIDO ✅)
   build:
     runs-on: ubuntu-latest
     needs: code-review
     if: needs.code-review.outputs.passed == 'true'
+    outputs:
+      artifact_name: ${{ steps.pom-extract.outputs.artifact_name }}
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
       
-      - name: Configurar JDK 17
+      # ✅ NUEVO: Extraer artifactId del pom.xml
+      - name: 📋 Extraer artifactId desde pom.xml
+        id: pom-extract
+        run: |
+          ARTIFACT_ID=$(xmlstarlet sel -t -v "//artifactId" pom.xml | head -1 | tr -d '\n\r')
+          echo "artifact_name=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+          echo "📦 Detectado: $ARTIFACT_ID"
+      
+      - name: Configurar JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: ${{ inputs.java-version }}
           distribution: 'temurin'
           cache: maven
       
@@ -143,10 +149,10 @@ jobs:
       - name: 📦 Subir JAR Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gitactions-jar-${{ github.run_number }}
-          path: target/gitactions-*.jar
+          name: "${{ steps.pom-extract.outputs.artifact_name }}-jar-${{ github.run_number }}"
+          path: "target/${{ steps.pom-extract.outputs.artifact_name }}-*.jar"
 
-  # 3. RELEASE JAR (SOLO si build OK) - PUBLICADO EN ASSETS
+  # 3. RELEASE JAR
   release:
     runs-on: ubuntu-latest
     needs: [code-review, build]
@@ -157,28 +163,28 @@ jobs:
       - name: 📥 Descargar JAR desde Build
         uses: actions/download-artifact@v4
         with:
-          name: gitactions-jar-${{ github.run_number }}
+          name: "${{ needs.build.outputs.artifact_name }}-jar-${{ github.run_number }}"
           path: target/
       
-      - name: 🚀 Crear Release JAR PÚBLICO en Releases
+      - name: 🚀 Crear Release JAR PÚBLICO
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: "Release v1.0.${{ github.run_number }}"
+          tag_name: "${{ inputs.version-prefix }}${{ github.run_number }}"
+          name: "${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }}"
           body: |
-            ✅ **CI/CD COMPLETADO** - Code Review + Build OK
+            ✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }}**
             
-            **📦 JAR Asset disponible en Releases:**
-            - `gitactions-*.jar`
+            **📦 JAR Asset disponible:**
+            - `${{ needs.build.outputs.artifact_name }}-*.jar`
             
             **Pipeline Status:**
             - Code Review: ✅ Passed
             - Build JAR: ✅ Success
             - Run Number: #${{ github.run_number }}
-          draft: false      # ← PÚBLICO inmediatamente
-          prerelease: false # ← Release estable
+          draft: false
+          prerelease: false
           files: |
-            target/gitactions-*.jar
+            target/*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -191,20 +197,18 @@ jobs:
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          header: "🚦 CI/CD Pipeline Status"
+          header: "🚦 ${{ inputs.artifact-prefix }} CI/CD Pipeline"
           message: |
-            ## 📊 **Pipeline Results**
+            ## 📊 **${{ inputs.artifact-prefix }} Pipeline Results**
             | Job | Status |
             |-----|--------|
-            | 🔍 Code Review | ${{ needs.code-review.result }} |
-            | 🏗️ Build | ${{ needs.build.result || '⏸️' }} |
-            | 🚀 Release | ${{ needs.release.result || '⏸️' }} |
+            | 🔍 **Code Review** | ${{ needs.code-review.result }} |
+            | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
+            | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
 
             ${{ 
               (needs.code-review.outputs.passed == 'true' && needs.release.result == 'success') && 
-              format('# ✅ **JAR PUBLICADO v1.0.{0}** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-v1.0.{0}-brightgreen)](https://github.com/BEstr-Fullm4n/repoActionsJava/releases/tag/v1.0.{0})', github.run_number) || 
-              needs.code-review.outputs.passed != 'true' && '## 🔴 **Code Review FALLÓ** → Revisa XML en Artifacts' || 
+              format('✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}{0} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-v1.0.{0}-brightgreen)](https://github.com/{{ github.repository }}/releases/tag/${{ inputs.version-prefix }}{0})', github.run_number) || 
+              needs.code-review.outputs.passed != 'true' && format('🔴 **Code Review FALLÓ** → Revisa `${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}` en Artifacts', github.run_number) || 
               '## ⏳ **Pipeline ejecutándose...**'
             }}
-
-
