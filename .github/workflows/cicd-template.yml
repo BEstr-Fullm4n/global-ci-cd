@@ -132,7 +132,14 @@ jobs:
       - name: 📋 Extraer artifactId desde pom.xml
         id: pom-extract
         run: |
-          ARTIFACT_ID=$(xmlstarlet sel -t -v "//artifactId" pom.xml | head -1 | tr -d '\n\r')
+          if [ -f pom.xml ]; then
+            ARTIFACT_ID=$(xmlstarlet sel -t -v "//artifactId" pom.xml | head -1 | tr -d '\n\r' | grep -v '^$')
+            if [ -z "$ARTIFACT_ID" ]; then
+              ARTIFACT_ID="${{ inputs.artifact-prefix }}"
+            fi
+          else
+            ARTIFACT_ID="${{ inputs.artifact-prefix }}"
+          fi
           echo "artifact_name=$ARTIFACT_ID" >> $GITHUB_OUTPUT
           echo "📦 Detectado: $ARTIFACT_ID"
       
