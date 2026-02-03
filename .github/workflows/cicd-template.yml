@@ -127,6 +127,9 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
+
+      - name: 🔧 Instalar xmlstarlet  # ← NUEVO
+        run: sudo apt-get update -qq && sudo apt-get install -y xmlstarlet
       
       # ✅ NUEVO: Extraer artifactId del pom.xml
       - name: 📋 Extraer artifactId desde pom.xml
