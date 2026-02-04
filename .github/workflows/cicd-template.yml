@@ -182,27 +182,34 @@ jobs:
 
   # 4. COMENTARIO FINAL EN PR
   comment:
-  runs-on: ubuntu-latest
-  needs: [code-review, build, release]
-  steps:
-    - name: 💬 Status Final PR
-      if: always()
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        header: "🚦 gitactionsJava1 CI/CD Pipeline"
-        message: |
-          ## 📊 **gitactionsJava1 Pipeline Results**
-          | Job | Status |
-          |-----|--------|
-          | 🔍 **Code Review** | ${{ needs.code-review.result }} |
-          | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
-          | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
+    runs-on: ubuntu-latest
+    needs: [code-review, build, release]
+    outputs:  # ← AGREGAR ESTO
+      passed: ${{ steps.review.outcome == 'success' }}
+      artifact_prefix: ${{ inputs.artifact-prefix }}     # ← AGREGAR
+      version_prefix: ${{ inputs.version-prefix }}       # ← AGREGAR
+    steps:
+      - name: 💬 Status Final PR
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: "🚦 ${{ inputs.artifact-prefix }} CI/CD Pipeline"
+          message: |
+            ## 📊 **${{ inputs.artifact-prefix }} Pipeline Results**
+            | Job | Status |
+            |-----|--------|
+            | 🔍 **Code Review** | ${{ needs.code-review.result }} |
+            | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
+            | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
 
-          ${{ 
-            (needs.code-review.outputs.passed == 'true' && needs.release.result == 'success') && 
-            format('✅ **JAR PUBLICADO v1.0.%d** 🚀 https://github.com/BEstr-Fullm4n/gitactionsJava1/releases/tag/v1.0.%d', github.run_number, github.run_number) || 
-            needs.code-review.outputs.passed != 'true' && 
-            format('🔴 **Code Review FALLÓ** → Revisa `gitactionsJava1-reports-%d` en Artifacts', github.run_number) || 
-            '## ⏳ **Pipeline ejecutándose...**'
-          }}
+            ${{ 
+              (needs.code-review.outputs.passed == 'true' && needs.release.result == 'success') && 
+              format('✅ **%s %s%d PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-v1.0.%d-brightgreen)](https://github.com/%s/releases/tag/%s%d)', 
+                inputs.artifact-prefix, inputs.version-prefix, github.run_number,
+                github.run_number, github.repository, inputs.version-prefix, github.run_number) || 
+              needs.code-review.outputs.passed != 'true' && 
+              format('🔴 **Code Review FALLÓ** → Revisa `%s-reports-%d` en Artifacts', 
+                inputs.artifact-prefix, github.run_number) || 
+              '## ⏳ **Pipeline ejecutándose...**'
+            }}
 
