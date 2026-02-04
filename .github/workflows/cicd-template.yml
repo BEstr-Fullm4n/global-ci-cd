@@ -204,12 +204,8 @@ jobs:
 
             ${{ 
               (needs.code-review.outputs.passed == 'true' && needs.release.result == 'success') && 
-              format('✅ **%s %s%d PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-v1.0.%d-brightgreen)](https://github.com/%s/releases/tag/%s%d)', 
-                inputs.artifact-prefix, inputs.version-prefix, github.run_number,
-                github.run_number, github.repository, inputs.version-prefix, github.run_number) || 
-              needs.code-review.outputs.passed != 'true' && 
-              format('🔴 **Code Review FALLÓ** → Revisa `%s-reports-%d` en Artifacts', 
-                inputs.artifact-prefix, github.run_number) || 
+              format('✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}{0} PUBLICADO** 📥[![JAR Download](https://img.shields.io/badge/JAR-v1.0.{0}-brightgreen)](https://github.com/{{ github.repository }}/releases/tag/${{ inputs.version-prefix }}{0})', github.run_number) || 
+              needs.code-review.outputs.passed != 'true' && format('🔴 **Code Review FALLÓ** → Revisa `${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}` en Artifacts', github.run_number) || 
               '## ⏳ **Pipeline ejecutándose...**'
             }}
 
