@@ -141,8 +141,8 @@ jobs:
       - name: 📦 Subir JAR Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.pom-extract.outputs.artifact_name }}-jar-${{ github.run_number }}"
-          path: "target/${{ steps.pom-extract.outputs.artifact_name }}-*.jar"
+          name: "${{ inputs.artifact-prefix }}-jar-${{ github.run_number }}"
+          path: target/*.jar    # ← ✅ Spring Boot executable incluido
 
   # 3. RELEASE JAR
   release:
