@@ -151,6 +151,8 @@ jobs:
     if: needs.build.result == 'success'
     permissions:
       contents: write
+    outputs:
+      final_message: ${{ steps.msg.outputs.text }}
     steps:
       - name: 📥 Descargar JAR desde Build
         uses: actions/download-artifact@v4
@@ -213,5 +215,5 @@ jobs:
             | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
             | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
 
-            ${{ steps.msg.outputs.text }}
+            ${{ needs.release.outputs.final_message }}
 
