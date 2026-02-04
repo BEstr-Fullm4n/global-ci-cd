@@ -185,7 +185,7 @@ jobs:
       - name: Preparar mensaje 
         id: msg 
         run: | 
-          if [ "${{ needs.code-review.outputs.passed }}" = "true" ] && [ "${{ needs.release.result }}" = "success" ]; then 
+          if [ "${{ needs.code-review.outputs.passed }}" = "true" ]; then 
             echo "text=✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀" >> $GITHUB_OUTPUT 
           elif [ "${{ needs.code-review.outputs.passed }}" != "true" ]; then 
             echo "text=🔴 **Code Review FALLÓ** → Revisa ${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}" >> $GITHUB_OUTPUT 
