@@ -48,6 +48,8 @@ jobs:
   # 2. CODE REVIEW (Bloquea todo si falla)
   code-review:
     runs-on: ubuntu-latest
+    needs: [validate-branch]           # ← DEPENDENCIA
+    if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
     outputs:
       passed: ${{ steps.review.outcome == 'success' }}
     steps:
