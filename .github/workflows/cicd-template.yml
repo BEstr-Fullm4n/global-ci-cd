@@ -20,7 +20,32 @@ on:
         default: 'v1.0.'
 
 jobs:
-  # 1. CODE REVIEW (Bloquea todo si falla)
+
+  # 1. VALIDAR RAMA (NUEVO - BLOQUEA TODO)
+  validate-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      valid: ${{ steps.check.outputs.length_ok }}
+    steps:
+      - name: 📏 Verificar longitud rama < 64 chars
+        id: check
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          LENGTH=${#BRANCH_NAME}
+          
+          echo "📏 Rama: '$BRANCH_NAME' → $LENGTH caracteres"
+          
+          if [ $LENGTH -ge 64 ]; then
+            echo "❌ ERROR: Rama excede 64 caracteres"
+            echo "length_ok=false" >> $GITHUB_OUTPUT
+            echo ":::error::❌ Rama '$BRANCH_NAME' tiene $LENGTH chars (MAX 64)" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "✅ Rama OK: $LENGTH chars"
+            echo "length_ok=true" >> $GITHUB_OUTPUT
+          fi
+
+  # 2. CODE REVIEW (Bloquea todo si falla)
   code-review:
     runs-on: ubuntu-latest
     outputs:
@@ -117,7 +142,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 2. BUILD JAR (CORREGIDO ✅)
+  # 3. BUILD JAR (CORREGIDO ✅)
   build:
     runs-on: ubuntu-latest
     needs: code-review
@@ -144,7 +169,7 @@ jobs:
           name: "${{ inputs.artifact-prefix }}-jar-${{ github.run_number }}"
           path: target/*.jar    # ← ✅ Spring Boot executable incluido
 
-  # 3. RELEASE JAR
+  # 4. RELEASE JAR
   release:
     runs-on: ubuntu-latest
     needs: [code-review, build]
@@ -193,7 +218,7 @@ jobs:
             echo "text=## ⏳ **Pipeline ejecutándose...**" >> $GITHUB_OUTPUT 
           fi
 
-  # 4. COMENTARIO FINAL EN PR
+  # 5. COMENTARIO FINAL EN PR
   comment:
     runs-on: ubuntu-latest
     needs: [code-review, build, release]
