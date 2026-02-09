@@ -45,11 +45,11 @@ jobs:
             echo "length_ok=true" >> $GITHUB_OUTPUT
           fi
 
-  # 2. CODE REVIEW (Bloquea todo si falla)
+  # 2. CODE REVIEW (Continuar si falla)
   code-review:
     runs-on: ubuntu-latest
-    needs: [validate-branch]           # ← DEPENDENCIA
-    if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
+    needs: [validate-branch]
+    if: needs.validate-branch.outputs.valid == 'true'
     outputs:
       passed: ${{ steps.review.outcome == 'success' }}
     steps:
@@ -144,15 +144,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 3. BUILD JAR (CORREGIDO ✅)
+  # 3. BUILD JAR
   build:
     runs-on: ubuntu-latest
     #needs: code-review
     #if: needs.code-review.outputs.passed == 'true'
-    needs: [validate-branch]           # ← DEPENDENCIA
-    if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
+    needs: [validate-branch]
+    if: needs.validate-branch.outputs.valid == 'true'
     outputs:
-      artifact_name: ${{ inputs.artifact-prefix }}  # ← SIMPLE
+      artifact_name: ${{ inputs.artifact-prefix }}
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
@@ -171,15 +171,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "${{ inputs.artifact-prefix }}-jar-${{ github.run_number }}"
-          path: target/*.jar    # ← ✅ Spring Boot executable incluido
+          path: target/*.jar
 
   # 4. RELEASE JAR
   release:
     runs-on: ubuntu-latest
     #needs: [code-review, build]
-    #if: needs.build.result == 'success'
-    needs: [validate-branch, build]           # ← DEPENDENCIA
-    #if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
+    needs: [validate-branch, build]
     if: needs.build.result == 'success'
     permissions:
       contents: write
@@ -234,10 +232,10 @@ jobs:
     runs-on: ubuntu-latest
     #needs: [code-review, build, release]
     needs: [validate-branch, build, release]
-    outputs:  # ← AGREGAR ESTO
+    outputs:
       passed: ${{ steps.review.outcome == 'success' }}
-      artifact_prefix: ${{ inputs.artifact-prefix }}     # ← AGREGAR
-      version_prefix: ${{ inputs.version-prefix }}       # ← AGREGAR
+      artifact_prefix: ${{ inputs.artifact-prefix }}
+      version_prefix: ${{ inputs.version-prefix }}
     steps:
       - name: 💬 Status Final PR
         if: always()
