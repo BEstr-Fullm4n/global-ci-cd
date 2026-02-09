@@ -217,13 +217,18 @@ jobs:
       - name: Preparar mensaje 
         id: msg 
         run: | 
-          if [ "${{ needs.code-review.outputs.passed }}" = "true" ]; then 
-            echo "text=✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-${{ inputs.version-prefix }}${{ github.run_number }}-brightgreen)](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version-prefix }}${{ github.run_number }})" >> $GITHUB_OUTPUT 
-          elif [ "${{ needs.code-review.outputs.passed }}" != "true" ]; then 
-            echo "text=🔴 **Code Review FALLÓ** → Revisa ${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}" >> $GITHUB_OUTPUT 
-          else 
-            echo "text=## ⏳ **Pipeline ejecutándose...**" >> $GITHUB_OUTPUT 
+          msg="## ⏳ **Pipeline ejecutándose...**"
+
+          if [ "${{ needs.code-review.outputs.passed }}" = "true" ]; then
+            msg="✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-${{ inputs.version-prefix }}${{ github.run_number }}-brightgreen)](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version-prefix }}${{ github.run_number }})"
+          else
+            # Aquí quieres que se vea el mensaje de error Y el de éxito
+            msg="🔴 **Code Review FALLÓ** → Revisa ${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}"
+            msg="$msg"$'\n'"✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-${{ inputs.version-prefix }}${{ github.run_number }}-brightgreen)](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version-prefix }}${{ github.run_number }})"
           fi
+          echo "text<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$msg" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
   # 5. COMENTARIO FINAL EN PR
   comment:
@@ -244,7 +249,7 @@ jobs:
             ## 📊 **${{ inputs.artifact-prefix }} Pipeline Results**
             | Job | Status |
             |-----|--------|
-            | 🔍 **Code Review** | ${{ needs.code-review.result }} |
+            | 🔍 **Code Review** | ${{ needs.code-review.result || '⏸️ Bloqueado' } |
             | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
             | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
 
