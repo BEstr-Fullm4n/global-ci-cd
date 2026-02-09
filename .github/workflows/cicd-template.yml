@@ -149,7 +149,7 @@ jobs:
     runs-on: ubuntu-latest
     #needs: code-review
     #if: needs.code-review.outputs.passed == 'true'
-    needs: [validate-branch, code-review]           # ← DEPENDENCIA
+    needs: [validate-branch]           # ← DEPENDENCIA
     if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
     outputs:
       artifact_name: ${{ inputs.artifact-prefix }}  # ← SIMPLE
@@ -178,7 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     #needs: [code-review, build]
     #if: needs.build.result == 'success'
-    needs: [validate-branch, code-review, build]           # ← DEPENDENCIA
+    needs: [validate-branch, build]           # ← DEPENDENCIA
     #if: needs.validate-branch.outputs.valid == 'true'  # ← CONDICIÓN
     if: needs.build.result == 'success'
     permissions:
