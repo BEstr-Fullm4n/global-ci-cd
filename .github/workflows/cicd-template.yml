@@ -214,18 +214,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Preparar mensaje 
-        id: msg 
-        run: | 
-          msg="## ⏳ **Pipeline ejecutándose...**"
-
+      - name: Preparar mensaje
+        id: msg
+        run: |
           if [ "${{ needs.code-review.outputs.passed }}" = "true" ]; then
             msg="✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-${{ inputs.version-prefix }}${{ github.run_number }}-brightgreen)](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version-prefix }}${{ github.run_number }})"
           else
-            # Aquí quieres que se vea el mensaje de error Y el de éxito
-            msg="🔴 **Code Review FALLÓ** → Revisa ${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}"
+            error_url="https://github.com/${{ github.repository }}/releases/tag/${{ inputs.artifact-prefix }}-errors-${{ github.run_number }}"
+            msg="🔴 **Code Review FALLÓ** → Revisa [${{ inputs.artifact-prefix }}-reports-${{ github.run_number }}]($error_url)"
             msg="$msg"$'\n'"✅ **${{ inputs.artifact-prefix }} ${{ inputs.version-prefix }}${{ github.run_number }} PUBLICADO** 🚀 📥[![JAR Download](https://img.shields.io/badge/JAR-${{ inputs.version-prefix }}${{ github.run_number }}-brightgreen)](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version-prefix }}${{ github.run_number }})"
           fi
+
           echo "text<<EOF" >> "$GITHUB_OUTPUT"
           echo "$msg" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
