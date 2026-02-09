@@ -228,7 +228,8 @@ jobs:
   # 5. COMENTARIO FINAL EN PR
   comment:
     runs-on: ubuntu-latest
-    needs: [code-review, build, release]
+    #needs: [code-review, build, release]
+    needs: [validate-branch, build, release]
     outputs:  # ← AGREGAR ESTO
       passed: ${{ steps.review.outcome == 'success' }}
       artifact_prefix: ${{ inputs.artifact-prefix }}     # ← AGREGAR
