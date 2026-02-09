@@ -249,7 +249,7 @@ jobs:
             ## 📊 **${{ inputs.artifact-prefix }} Pipeline Results**
             | Job | Status |
             |-----|--------|
-            | 🔍 **Code Review** | ${{ needs.code-review.result || '⏸️ Bloqueado' } |
+            | 🔍 **Code Review** | ${{ needs.code-review.result }} |
             | 🏗️ **Build JAR** | ${{ needs.build.result || '⏸️ Bloqueado' }} |
             | 🚀 **Release** | ${{ needs.release.result || '⏸️ Bloqueado' }} |
 
